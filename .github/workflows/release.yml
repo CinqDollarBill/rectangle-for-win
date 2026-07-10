@@ -98,7 +98,7 @@ jobs:
           body: |
             ## Download
 
-            **Most people want `RectangleWinPlus-win-x64.exe`.** It is one self-contained file —
+            **Most people want `RectangleWinPlus-win-x64.exe`.** It is one self-contained file:
             download it, run it, and it lives in your system tray. Nothing to install.
 
             On an Arm device (Snapdragon X, Surface Pro X) take `RectangleWinPlus-win-arm64.exe`.
@@ -113,7 +113,7 @@ jobs:
             `SHA256SUMS-win-x64.txt` first.
 
             Some antivirus flags any program that installs a keyboard hook, which is how this app
-            claims `Ctrl+Win+Left/Right` from Windows. Nothing is recorded or transmitted — see
+            claims `Ctrl+Win+Left/Right` from Windows. Nothing is recorded or transmitted; see
             `HotkeyEngine.cs`.
 
             ### Shortcuts
@@ -127,4 +127,4 @@ jobs:
             | `Ctrl+Win+Right`+`Down` | bottom-right quarter |
             | `Ctrl+Win+Enter` | maximize |
 
-            All rebindable — right-click the tray icon and choose Settings.
+            All rebindable: right-click the tray icon and choose Settings.

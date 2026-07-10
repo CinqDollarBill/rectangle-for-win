@@ -9,7 +9,7 @@ internal static class Program
         using var single = new Mutex(initiallyOwned: true, @"Local\RectangleWinPlus.SingleInstance", out bool first);
         if (!first)
         {
-            MessageBox.Show("RectangleWinPlus is already running — look for it in the system tray.",
+            MessageBox.Show("RectangleWinPlus is already running. Look for it in the system tray.",
                 "RectangleWinPlus", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }

@@ -58,7 +58,7 @@ public sealed class Binding : IEquatable<Binding>
     public override string ToString()
     {
         var sb = new StringBuilder();
-        // Ctrl, Alt, Shift, Win — matches how the defaults read: "Ctrl+Win+Left+Up".
+        // Ctrl, Alt, Shift, Win, matching how the defaults read: "Ctrl+Win+Left+Up".
         if (Mods.HasFlag(Mods.Ctrl)) sb.Append("Ctrl+");
         if (Mods.HasFlag(Mods.Alt)) sb.Append("Alt+");
         if (Mods.HasFlag(Mods.Shift)) sb.Append("Shift+");

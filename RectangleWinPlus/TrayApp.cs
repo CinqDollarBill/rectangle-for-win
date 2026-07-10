@@ -134,7 +134,7 @@ internal sealed class TrayApp : ApplicationContext
         }
 
         // Modal: ShowDialog runs its own message pump, so the keyboard hook and the chord timer
-        // keep working while the dialog is up — which is what makes live shortcut recording possible.
+        // keep working while the dialog is up, which is what makes live shortcut recording possible.
         using var form = new SettingsForm(_engine, _config);
         _settings = form;
         try

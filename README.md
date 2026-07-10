@@ -1,7 +1,7 @@
 # RectangleWinPlus
 
 Hotkey window snapping for Windows. Snap the focused window to a half, a quarter, or full screen
-with chorded arrow shortcuts — and change any of them.
+with chorded arrow shortcuts, and change any of them.
 
 Inspired by [Rectangle](https://github.com/rxhanson/Rectangle) on macOS and
 [RectangleWin](https://github.com/ahmetb/RectangleWin) on Windows. RectangleWin's own roadmap lists
@@ -14,10 +14,10 @@ to it. That's the gap this fills.
 
 Grab the latest build from **[Releases](../../releases)**.
 
-- **`RectangleWinPlus-win-x64.exe`** — what most people want. One self-contained file: download it,
+- **`RectangleWinPlus-win-x64.exe`**: what most people want. One self-contained file: download it,
   run it, and it appears in your system tray. Nothing to install.
-- **`RectangleWinPlus-win-arm64.exe`** — for Arm devices (Snapdragon X, Surface Pro X).
-- **`…-framework-dependent.exe`** — a few hundred KB instead of ~47 MB, but requires the
+- **`RectangleWinPlus-win-arm64.exe`**: for Arm devices (Snapdragon X, Surface Pro X).
+- **`…-framework-dependent.exe`**: a few hundred KB instead of ~47 MB, but requires the
   [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0).
 
 On first run, Windows SmartScreen warns about an unrecognized publisher, because the binaries are not
@@ -53,8 +53,8 @@ arrives. It waits out a short **chord window** (120 ms by default):
 - The window closes with nothing else pressed → the half fires.
 - `Ctrl+Win+Enter` fires instantly, because no longer shortcut can extend it.
 
-Only the four half-screen shortcuts pay the 120 ms. If you press the second arrow *late* — after the
-half already snapped — while still holding the first, the window still upgrades to the quadrant.
+Only the four half-screen shortcuts pay the 120 ms. If you press the second arrow *late* (after the
+half already snapped) while still holding the first, the window still upgrades to the quadrant.
 
 Set `chordWindowMs` to `0` and halves snap instantly; quadrants keep working, but you'll see the
 window land on the half first.
@@ -94,7 +94,7 @@ required). Keys are letters, digits, `F1`–`F24`, `Num0`–`Num9`, `Left`/`Righ
 `Esc`, `Space`, `Tab`, `Backspace`, `Delete`, `Insert`, `Home`, `End`, `PageUp`, `PageDown`. At most
 two keys per shortcut. Set a shortcut to `""` to unbind it.
 
-A broken config is never overwritten — the app logs what it couldn't read, shows a tray warning, and
+A broken config is never overwritten: the app logs what it couldn't read, shows a tray warning, and
 falls back to defaults so you can fix the typo.
 
 **`gap`** insets snapped windows, in pixels. Every visible gutter measures exactly `gap`, whether it's
@@ -104,14 +104,14 @@ against a screen edge or a seam two windows share.
 
 **Virtual desktop switching.** `Ctrl+Win+Left` and `Ctrl+Win+Right` are reserved by Windows for
 switching virtual desktops, and `RegisterHotKey` will not hand them over. So this app runs a
-`WH_KEYBOARD_LL` low-level keyboard hook — the same approach PowerToys uses — which sees keys before
+`WH_KEYBOARD_LL` low-level keyboard hook (the same approach PowerToys uses), which sees keys before
 the shell does. **While it runs, those two combos snap windows instead of switching desktops.**
 `Ctrl+Win+D` (new desktop) and `Ctrl+Win+F4` (close desktop) still work, as does `Win+Tab`. Rebind
 those two shortcuts if you'd rather keep desktop switching.
 
 `Ctrl+Win+Enter` (Narrator) and `Ctrl+Win+M` (Magnifier) are claimed the same way.
 
-**Windows running as administrator** can't be moved by a non-elevated process — Windows blocks it.
+**Windows running as administrator** can't be moved by a non-elevated process; Windows blocks it.
 Run RectangleWinPlus as administrator too if you need to snap those. It says so once, in a tray
 balloon, rather than failing silently.
 
@@ -176,8 +176,8 @@ is produced.
 binds exactly one key plus modifiers, so it cannot express `Ctrl+Win+Left+Up`. And it refuses combos
 the shell already owns, which includes `Ctrl+Win+Left/Right`.
 
-**The invisible border.** Modern windows carry an invisible resize border — roughly 7px at 100% DPI on
-the left, right and bottom — so `GetWindowRect` returns a rectangle larger than what you see. Snap a
+**The invisible border.** Modern windows carry an invisible resize border (roughly 7px at 100% DPI on
+the left, right and bottom), so `GetWindowRect` returns a rectangle larger than what you see. Snap a
 window to an exact quadrant and it looks *wrong*, floating a few pixels off two edges. The fix is to
 ask DWM for `DWMWA_EXTENDED_FRAME_BOUNDS`, diff it against `GetWindowRect`, and inflate the target by
 that delta. It's why snapped windows here sit flush against each other and the screen.
@@ -197,4 +197,4 @@ display, per-app ignore lists. Rectangle on macOS has all of these.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

@@ -10,7 +10,7 @@ namespace RectangleWinPlus;
 ///   2. Windows already owns Ctrl+Win+Left/Right (virtual desktops) and Ctrl+Win+Enter (Narrator),
 ///      and refuses to register them. A hook sees keys before the shell does, so we can claim them.
 ///
-/// The hook callback stays cheap — it only mutates a few sets and posts work elsewhere. If it ever
+/// The hook callback stays cheap: it only mutates a few sets and posts work elsewhere. If it ever
 /// blocked past LowLevelHooksTimeout (300ms by default) Windows would silently evict the hook.
 /// </summary>
 internal sealed class HotkeyEngine : IDisposable
