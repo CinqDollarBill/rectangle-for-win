@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build
+        run: dotnet build RectangleWinPlus -c Release --nologo
+
+      - name: Build self-test
+        run: dotnet build RectangleWinPlus.SelfTest -c Release --nologo
+
+      # The live-window and end-to-end passes drive real windows, a real keyboard hook and the
+      # foreground window. They are reliable on a desktop and flaky on a CI runner, so CI covers
+      # shortcut parsing, snap geometry, the chord state machine and shortcut recording.
+      - name: Test
+        run: ./RectangleWinPlus.SelfTest/bin/Release/net10.0-windows/RectangleWinPlus.SelfTest.exe --no-live
+
+      # Compares the icon's frame table, not its bytes: GDI+ antialiasing and the PNG encoder are
+      # not guaranteed to be byte-identical across Windows builds, so a hash check would fail here
+      # for reasons that look like nothing at all.
+      - name: Verify the icon still matches its generator
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Drawing
+          powershell -ExecutionPolicy Bypass -File tools/make-icon.ps1 -OutFile "$env:RUNNER_TEMP/icon-check.ico"
+
+          function Read-Frames([string]$path) {
+            $b = [System.IO.File]::ReadAllBytes($path)
+            $n = [BitConverter]::ToUInt16($b, 4)
+            0..($n - 1) | ForEach-Object {
+              $o = 6 + 16 * $_
+              $w = if ($b[$o] -eq 0) { 256 } else { $b[$o] }
+              $off = [BitConverter]::ToUInt32($b, $o + 12)
+              $png = ($b[$off] -eq 0x89 -and $b[$off + 1] -eq 0x50)
+              "$w$(if ($png) { ':png' } else { ':dib' })"
+            }
+          }
+
+          $committed = (Read-Frames 'RectangleWinPlus/icon.ico') -join ' '
+          $generated = (Read-Frames "$env:RUNNER_TEMP/icon-check.ico") -join ' '
+          Write-Host "committed: $committed"
+          Write-Host "generated: $generated"
+
+          if ($committed -ne $generated) {
+            Write-Error 'icon.ico no longer matches tools/make-icon.ps1. Re-run the script and commit.'
+            exit 1
+          }
+
+          # And every uncompressed frame must actually decode.
+          foreach ($s in 16, 24, 32, 48, 64) {
+            $i = New-Object System.Drawing.Icon('RectangleWinPlus/icon.ico', $s, $s)
+            $bmp = $i.ToBitmap()
+            if ($bmp.Width -ne $s) { Write-Error "frame $s decoded as $($bmp.Width)"; exit 1 }
+            $bmp.Dispose(); $i.Dispose()
+          }
+          Write-Host 'icon.ico matches its generator and every frame decodes'

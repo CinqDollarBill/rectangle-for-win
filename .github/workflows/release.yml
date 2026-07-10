@@ -1,0 +1,130 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to build and publish (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: windows-latest
+
+    strategy:
+      matrix:
+        rid: [win-x64, win-arm64]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Test
+        run: |
+          dotnet build RectangleWinPlus.SelfTest -c Release --nologo
+          ./RectangleWinPlus.SelfTest/bin/Release/net10.0-windows/RectangleWinPlus.SelfTest.exe --no-live
+
+      # Self-contained: one .exe, no .NET runtime to install first. This is the download people want.
+      - name: Publish self-contained
+        run: >
+          dotnet publish RectangleWinPlus -c Release -r ${{ matrix.rid }}
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -o publish/${{ matrix.rid }}-standalone
+
+      # Framework-dependent: a few hundred KB, needs the .NET Desktop Runtime already present.
+      - name: Publish framework-dependent
+        run: >
+          dotnet publish RectangleWinPlus -c Release -r ${{ matrix.rid }}
+          --self-contained false
+          -p:PublishSingleFile=true
+          -o publish/${{ matrix.rid }}-framework
+
+      - name: Name the artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item publish/${{ matrix.rid }}-standalone/RectangleWinPlus.exe `
+                    dist/RectangleWinPlus-${{ matrix.rid }}.exe
+          Copy-Item publish/${{ matrix.rid }}-framework/RectangleWinPlus.exe `
+                    dist/RectangleWinPlus-${{ matrix.rid }}-framework-dependent.exe
+          Get-ChildItem dist | ForEach-Object { "{0}  {1:N1} MB" -f $_.Name, ($_.Length / 1MB) }
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem dist/*.exe | ForEach-Object {
+            "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Set-Content dist/SHA256SUMS-${{ matrix.rid }}.txt
+          Get-Content dist/SHA256SUMS-${{ matrix.rid }}.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RectangleWinPlus-${{ matrix.rid }}
+          path: dist/*
+
+  release:
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Collect
+        run: |
+          mkdir -p dist
+          find artifacts -type f -exec cp {} dist/ \;
+          ls -la dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          name: ${{ github.event.inputs.tag || github.ref_name }}
+          draft: false
+          generate_release_notes: true
+          files: dist/*
+          body: |
+            ## Download
+
+            **Most people want `RectangleWinPlus-win-x64.exe`.** It is one self-contained file —
+            download it, run it, and it lives in your system tray. Nothing to install.
+
+            On an Arm device (Snapdragon X, Surface Pro X) take `RectangleWinPlus-win-arm64.exe`.
+
+            The `-framework-dependent` builds are a few hundred KB instead of ~70 MB, but require the
+            [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) installed.
+
+            ### First run
+
+            Windows SmartScreen will warn about an unrecognized publisher, because these binaries are
+            not code-signed. Click **More info → Run anyway**, or verify the SHA-256 against
+            `SHA256SUMS-win-x64.txt` first.
+
+            Some antivirus flags any program that installs a keyboard hook, which is how this app
+            claims `Ctrl+Win+Left/Right` from Windows. Nothing is recorded or transmitted — see
+            `HotkeyEngine.cs`.
+
+            ### Shortcuts
+
+            | Shortcut | Action |
+            | --- | --- |
+            | `Ctrl+Win+Left/Right/Up/Down` | left / right / top / bottom half |
+            | `Ctrl+Win+Left`+`Up` | top-left quarter |
+            | `Ctrl+Win+Right`+`Up` | top-right quarter |
+            | `Ctrl+Win+Left`+`Down` | bottom-left quarter |
+            | `Ctrl+Win+Right`+`Down` | bottom-right quarter |
+            | `Ctrl+Win+Enter` | maximize |
+
+            All rebindable — right-click the tray icon and choose Settings.

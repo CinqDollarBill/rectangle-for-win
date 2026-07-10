@@ -1,0 +1,4 @@
+# Never apply line-ending conversion to binaries. CI hashes icon.ico against its generator,
+# and a mangled byte would fail the check for reasons nobody would guess.
+*.ico -text
+*.png -text
