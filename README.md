@@ -4,9 +4,8 @@ Hotkey window snapping for Windows. Snap the focused window to a half, a quarter
 with chorded arrow shortcuts, and change any of them.
 
 Inspired by [Rectangle](https://github.com/rxhanson/Rectangle) on macOS and
-[RectangleWin](https://github.com/ahmetb/RectangleWin) on Windows. RectangleWin's own roadmap lists
-configurable shortcuts as the one missing feature, with the author noting they'd probably never get
-to it. That's the gap this fills.
+[RectangleWin](https://github.com/ahmetb/RectangleWin) on Windows. RectangleWin's is currently missing
+configurable shortcuts which inspired RectangleWinPlus.
 
 ![The settings window](docs/settings.png)
 
