@@ -32,4 +32,10 @@
     <InternalsVisibleTo Include="RectangleWinPlus.SelfTest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Also embedded (beyond ApplicationIcon's Win32 resource) so the tray can load the same
+         artwork at the DPI-appropriate size, instead of a separately drawn glyph. -->
+    <EmbeddedResource Include="icon.ico" />
+  </ItemGroup>
+
 </Project>
