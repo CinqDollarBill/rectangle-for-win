@@ -20,6 +20,11 @@ $DibSizes = @(16, 24, 32, 48, 64)
 $PngSizes = @(256)
 $Sizes    = $DibSizes + $PngSizes
 
+# Brand gradient: a lighter azure at the top-left falling to a deep indigo at the bottom-right,
+# the palette modern Windows 11 / Fluent tiles favour.
+$TopColor    = [System.Drawing.Color]::FromArgb(0x3B, 0x82, 0xF6)  # azure
+$BottomColor = [System.Drawing.Color]::FromArgb(0x1D, 0x4E, 0xD8)  # indigo
+
 function New-RoundedPath([float]$x, [float]$y, [float]$w, [float]$h, [float]$r) {
     $path = New-Object System.Drawing.Drawing2D.GraphicsPath
     $d = $r * 2
@@ -34,30 +39,81 @@ function New-RoundedPath([float]$x, [float]$y, [float]$w, [float]$h, [float]$r) 
 function New-Frame([int]$s) {
     $bmp = New-Object System.Drawing.Bitmap($s, $s, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
     $g = [System.Drawing.Graphics]::FromImage($bmp)
-    $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $g.SmoothingMode     = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+    $g.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $g.PixelOffsetMode   = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
     $g.Clear([System.Drawing.Color]::Transparent)
 
-    # Blue rounded tile.
-    $tile = New-RoundedPath 0 0 $s $s ($s * 0.22)
-    $fill = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(37, 99, 235))
-    $g.FillPath($fill, $tile)
+    # A squircle-ish rounded tile, inset slightly so the corners breathe.
+    $inset  = [float]($s * 0.03)
+    $side   = [float]($s - 2 * $inset)
+    $radius = [float]($s * 0.235)
+    $tile = New-RoundedPath $inset $inset $side $side $radius
 
-    # A white window, quartered, with the top-left quadrant filled: the app in one glyph.
-    $m = [float]($s * 0.24)
+    # Diagonal gradient fill.
+    $rect = New-Object System.Drawing.RectangleF(0, 0, $s, $s)
+    $grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+        $rect, $TopColor, $BottomColor, 55.0)
+    $grad.WrapMode = [System.Drawing.Drawing2D.WrapMode]::TileFlipXY
+    $g.FillPath($grad, $tile)
+
+    # A soft top sheen: a translucent white highlight arcing across the upper portion, which reads
+    # as a glassy tile rather than a flat swatch. Clipped to the tile so it keeps the rounded edge.
+    $state = $g.Save()
+    $g.SetClip($tile)
+    $sheen = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
+        (New-Object System.Drawing.RectangleF(0, 0, $s, $s * 0.6)),
+        [System.Drawing.Color]::FromArgb(56, 255, 255, 255),
+        [System.Drawing.Color]::FromArgb(0, 255, 255, 255),
+        90.0)
+    $g.FillRectangle($sheen, 0, 0, $s, [float]($s * 0.6))
+    $sheen.Dispose()
+    $g.Restore($state)
+
+    # A crisp 1px inner rim lifts the tile off dark backgrounds.
+    $rim = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(40, 255, 255, 255)), ([Math]::Max(1.0, $s * 0.012))
+    $g.DrawPath($rim, $tile)
+
+    # --- glyph: a window, quartered, with the top-left pane filled ---
+    $m = [float]($s * 0.26)              # margin from tile edge to glyph
     $w = [float]($s - 2 * $m)
-    $h = [float]($s * 0.52)
+    $h = [float]($s * 0.48)
     $t = [float](($s - $h) / 2)
-    $stroke = [Math]::Max(1.0, $s * 0.055)
+    $stroke = [Math]::Max(1.0, $s * 0.052)
+    $paneRadius = [float]($s * 0.045)
+
+    # A subtle drop shadow beneath the glyph for depth (skipped at tiny sizes where it muddies).
+    if ($s -ge 32) {
+        $shadow = New-RoundedPath $m ($t + $s * 0.012) $w $h $paneRadius
+        $shPen = New-Object System.Drawing.Pen ([System.Drawing.Color]::FromArgb(45, 0, 0, 40)), $stroke
+        $shPen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+        $g.DrawPath($shPen, $shadow)
+        $shPen.Dispose(); $shadow.Dispose()
+    }
 
     $white = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::White)
-    $g.FillRectangle($white, $m, $t, $w / 2, $h / 2)
+    $faint = New-Object System.Drawing.SolidBrush ([System.Drawing.Color]::FromArgb(235, 255, 255, 255))
 
+    # Filled top-left pane.
+    $paneW = [float](($w - $stroke) / 2)
+    $paneH = [float](($h - $stroke) / 2)
+    $pane = New-RoundedPath $m $t $paneW $paneH ($paneRadius * 0.8)
+    $g.FillPath($faint, $pane)
+    $pane.Dispose()
+
+    # Window outline plus the two cross bars.
     $pen = New-Object System.Drawing.Pen ([System.Drawing.Color]::White), $stroke
-    $g.DrawRectangle($pen, $m, $t, $w, $h)
+    $pen.LineJoin = [System.Drawing.Drawing2D.LineJoin]::Round
+    $pen.StartCap = [System.Drawing.Drawing2D.LineCap]::Round
+    $pen.EndCap   = [System.Drawing.Drawing2D.LineCap]::Round
+
+    $outline = New-RoundedPath $m $t $w $h $paneRadius
+    $g.DrawPath($pen, $outline)
     $g.DrawLine($pen, $m, ($t + $h / 2), ($m + $w), ($t + $h / 2))
     $g.DrawLine($pen, ($m + $w / 2), $t, ($m + $w / 2), ($t + $h))
 
-    $pen.Dispose(); $white.Dispose(); $fill.Dispose(); $tile.Dispose(); $g.Dispose()
+    $outline.Dispose(); $pen.Dispose(); $white.Dispose(); $faint.Dispose()
+    $rim.Dispose(); $grad.Dispose(); $tile.Dispose(); $g.Dispose()
     return $bmp
 }
 
